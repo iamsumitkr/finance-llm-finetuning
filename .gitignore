@@ -1,0 +1,5 @@
+lora_finance/
+*.safetensors
+__pycache__/
+.ipynb_checkpoints/
+.env
