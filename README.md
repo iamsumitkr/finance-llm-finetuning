@@ -82,24 +82,6 @@ toward more concise and finance-oriented answers.
 
 ------------------------------------------------------------------------
 
-## 📂 Repository Structure
-
-finance-llm-finetuning/\
-│\
-├── train_lora.py\
-├── requirements.txt\
-│\
-├── data/\
-│ └── finance_instructions.jsonl\
-│\
-├── evaluation/\
-│ ├── base_results.json\
-│ └── lora_results.json\
-│\
-└── README.md
-
-------------------------------------------------------------------------
-
 ## ⚠️ Notes
 
 -   LoRA adapter weights (`lora_finance/`) are not included due to size.
