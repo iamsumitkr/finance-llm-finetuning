@@ -1,0 +1,42 @@
+[
+  {
+    "prompt": "Explain Return on Equity (ROE).",
+    "response": "### Instruction:\nExplain Return on Equity (ROE).\n\n### Input:\n\n### Response:\nReturn on Equity (ROE) measures how efficiently a company generates profit from shareholders' equity. It is calculated as net income divided by shareholders' equity."
+  },
+  {
+    "prompt": "Why do bond prices fall when interest rates rise?",
+    "response": "### Instruction:\nWhy do bond prices fall when interest rates rise?\n\n### Input:\n\n### Response:\nBond prices fall when interest rates rise because existing bonds with lower coupons become less attractive compared to newly issued bonds offering higher yields."
+  },
+  {
+    "prompt": "What does negative free cash flow indicate?",
+    "response": "### Instruction:\nWhat does negative free cash flow indicate?\n\n### Input:\n\n### Response:\nNegative free cash flow may indicate financial strain or poor cash management."
+  },
+  {
+    "prompt": "Summarize: Revenue grew 15% but margins declined due to rising costs.",
+    "response": "### Instruction:\nSummarize: Revenue grew 15% but margins declined due to rising costs.\n\n### Input:\n\n### Response:\nHigher revenue was offset by decreased profitability due to increased expenses."
+  },
+  {
+    "prompt": "How does inflation affect stock valuations?",
+    "response": "### Instruction:\nHow does inflation affect stock valuations?\n\n### Input:\n\n### Response:\nHigher inflation can increase expectations for future earnings, justifying higher stock valuations."
+  },
+  {
+    "prompt": "Explain operating leverage.",
+    "response": "### Instruction:\nExplain operating leverage.\n\n### Input:\n\n### Response:\nHigh operating leverage means fixed costs increase rapidly when sales rise."
+  },
+  {
+    "prompt": "If EPS is 5 and price is 125, calculate P/E.",
+    "response": "### Instruction:\nIf EPS is 5 and price is 125, calculate P/E.\n\n### Input:\n\n### Response:\nThe P/E ratio is 25."
+  },
+  {
+    "prompt": "Why might a company refinance debt?",
+    "response": "### Instruction:\nWhy might a company refinance debt?\n\n### Input:\n\n### Response:\nA company may refinance debt to lower interest payments or extend maturity dates."
+  },
+  {
+    "prompt": "What is the difference between EBITDA and net income?",
+    "response": "### Instruction:\nWhat is the difference between EBITDA and net income?\n\n### Input:\n\n### Response:\nEBITDA excludes interest and tax expenses, while net income includes these expenses."
+  },
+  {
+    "prompt": "How does diversification reduce portfolio risk?",
+    "response": "### Instruction:\nHow does diversification reduce portfolio risk?\n\n### Input:\n\n### Response:\nDiversification reduces risk by spreading investments across different assets, minimizing the impact of any single asset\u2019s poor performance."
+  }
+]

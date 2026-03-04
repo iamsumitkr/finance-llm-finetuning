@@ -1,50 +1,51 @@
 import os
 import json
-from datasets import load_dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer, DataCollatorForSeq2Seq
-from peft import LoraConfig, get_peft_model
 import torch
+from datasets import load_dataset
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    TrainingArguments,
+    Trainer,
+    DataCollatorForSeq2Seq,
+    BitsAndBytesConfig
+)
+from peft import LoraConfig, get_peft_model
 
-
+# Disable wandb
 os.environ["WANDB_DISABLED"] = "true"
 
+# =========================
+# Config
+# =========================
 
-# robust import for prepare_model_for_int8_training / kbit
-try:
-    from peft import prepare_model_for_int8_training as prepare_kbit_training
-except Exception:
-    try:
-        from peft import prepare_model_for_kbit_training as prepare_kbit_training
-    except Exception:
-        raise ImportError(
-            "peft helper function not found. Try running: pip install -U peft "
-            "or pip install peft==0.5.3"
-        )
+MODEL_NAME = os.environ.get("MODEL_NAME", "meta-llama/Meta-Llama-3-8B-Instruct")
+TRAIN_FILE = os.environ.get("TRAIN_FILE", "data/finance_instructions.jsonl")
 
-MODEL_NAME = os.environ.get("MODEL_NAME","meta-llama/Meta-Llama-3-8B-Instruct")  # replace if needed
-TRAIN_FILE = os.environ.get("TRAIN_FILE","data/finance_instructions.jsonl")
-OUT_DIR = os.environ.get("OUT_DIR","./lora_finance")
-MAX_LENGTH = int(os.environ.get("MAX_LENGTH", 512))
+# ⚠️ Change this in Colab to Google Drive path if mounted
+OUT_DIR = "/content/drive/MyDrive/lora_finance"
+
+MAX_LENGTH = int(os.environ.get("MAX_LENGTH", 256))
 
 print("Model:", MODEL_NAME)
 print("Train file:", TRAIN_FILE)
+print("Output dir:", OUT_DIR)
 
-# Load dataset
-ds = load_dataset("json", data_files={"train":TRAIN_FILE})
-# Train/val split small
+# =========================
+# Load Dataset
+# =========================
+
+ds = load_dataset("json", data_files={"train": TRAIN_FILE})
 ds = ds["train"].train_test_split(test_size=0.15, seed=42)
 
+# =========================
 # Tokenizer
+# =========================
+
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
+
 if tokenizer.pad_token_id is None:
     tokenizer.pad_token = tokenizer.eos_token
-
-def make_prompt(example):
-    inst = example.get("instruction","")
-    inp = example.get("input","")
-    out = example.get("output","")
-    prompt = f"### Instruction:\n{inst}\n\n### Input:\n{inp}\n\n### Response:\n{out}"
-    return prompt
 
 def preprocess(examples):
     instructions = examples["instruction"]
@@ -66,6 +67,7 @@ def preprocess(examples):
         max_length=MAX_LENGTH,
         padding="max_length"
     )
+
     tokenized["labels"] = tokenized["input_ids"].copy()
     return tokenized
 
@@ -75,49 +77,79 @@ ds = ds.map(
     remove_columns=ds["train"].column_names
 )
 
+# =========================
+# Load Model in 8-bit (Modern Way)
+# =========================
 
-# Load model in 8-bit (memory saving)
-print("Loading model in 8-bit (this may still be heavy)...")
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_NAME,
+print("Loading model in 8-bit...")
+
+bnb_config = BitsAndBytesConfig(
     load_in_8bit=True,
-    device_map="auto"
+    llm_int8_enable_fp32_cpu_offload=True
 )
 
-# Prepare for int8 training and apply LoRA
-model = prepare_kbit_training(model)
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME,
+    quantization_config=bnb_config,
+    device_map="auto",
+    torch_dtype=torch.float16
+)
 
+# =========================
+# Prepare for k-bit training
+# =========================
+
+try:
+    from peft import prepare_model_for_kbit_training
+except ImportError:
+    from peft import prepare_model_for_int8_training as prepare_model_for_kbit_training
+
+model = prepare_model_for_kbit_training(model)
+
+# =========================
+# LoRA Configuration
+# =========================
 
 lora_config = LoraConfig(
     r=8,
     lora_alpha=32,
-    target_modules=["q_proj","v_proj","k_proj","o_proj"],  # common targets; may vary by model
+    target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],
     lora_dropout=0.05,
     bias="none",
     task_type="CAUSAL_LM"
 )
-model = get_peft_model(model, lora_config)
-print("PEFT model prepared. Trainable params:", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
-# Training args: tiny batch, accumulate grads to simulate bigger batch
+model = get_peft_model(model, lora_config)
+
+trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print("Trainable params:", trainable_params)
+
+# =========================
+# Training Arguments
+# =========================
+
 training_args = TrainingArguments(
     output_dir=OUT_DIR,
     per_device_train_batch_size=1,
     per_device_eval_batch_size=1,
-    gradient_accumulation_steps=8,   # effective batch size = 8
-    warmup_steps=10,
-    max_steps=200,    # small quick run for learning; increase later
+    gradient_accumulation_steps=8,
+    warmup_steps=20,
+    max_steps=300,
+    learning_rate=2e-4,
     logging_steps=10,
-    eval_strategy="steps",
-    eval_steps=100,
     save_strategy="steps",
-    save_steps=200,
+    save_steps=300,
     fp16=True,
-    save_total_limit=3,
+    save_total_limit=2,
     remove_unused_columns=False,
+    report_to="none"
 )
 
-data_collator = DataCollatorForSeq2Seq(tokenizer, pad_to_multiple_of=8, return_tensors="pt")
+data_collator = DataCollatorForSeq2Seq(
+    tokenizer,
+    pad_to_multiple_of=8,
+    return_tensors="pt"
+)
 
 trainer = Trainer(
     model=model,
@@ -127,6 +159,13 @@ trainer = Trainer(
     data_collator=data_collator
 )
 
+# =========================
+# Train
+# =========================
+
 trainer.train()
-print("Training finished. Saving adapter.")
+
+print("Training finished. Saving LoRA adapter...")
 model.save_pretrained(OUT_DIR)
+
+print("Saved to:", OUT_DIR)
